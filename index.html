@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fingerprint Authentication</title>
+</head>
+<body>
+    <h1>Fingerprint Authentication</h1>
+    <button id="registerBtn">Register Fingerprint</button>
+    <button id="loginBtn" disabled>Login with Fingerprint</button>
+
+   <script>
+     // Check if WebAuthn is supported
+if (!window.PublicKeyCredential) {
+  alert("Your browser does not support WebAuthn. Please use a modern browser.");
+}
+
+const registerBtn = document.getElementById('registerBtn');
+const loginBtn = document.getElementById('loginBtn');
+
+// Function to generate a random challenge
+function generateChallenge() {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+// Register Fingerprint
+registerBtn.addEventListener('click', async () => {
+  try {
+    const publicKeyCredentialCreationOptions = {
+      challenge: generateChallenge(),
+      rp: {
+        name: "My Fingerprint Auth Site",
+      },
+      user: {
+        id: crypto.getRandomValues(new Uint8Array(16)),
+        name: "user@example.com",
+        displayName: "User",
+      },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256 algorithm
+      authenticatorSelection: {
+        authenticatorAttachment: "platform", // Use platform authenticator (e.g., fingerprint scanner)
+      },
+      timeout: 60000, // 60 seconds
+      attestation: "direct"
+    };
+
+    // Create a new credential (register fingerprint)
+    const credential = await navigator.credentials.create({
+      publicKey: publicKeyCredentialCreationOptions
+    });
+
+    // Save the credential ID to local storage
+    localStorage.setItem('fingerprintCredentialId', credential.id);
+    alert("Fingerprint registered successfully!");
+    loginBtn.disabled = false;
+  } catch (err) {
+    console.error("Error during registration:", err);
+    alert("Fingerprint registration failed. Please try again.");
+  }
+});
+
+// Login with Fingerprint
+loginBtn.addEventListener('click', async () => {
+  const credentialId = localStorage.getItem('fingerprintCredentialId');
+  if (!credentialId) {
+    alert("No fingerprint registered. Please register first.");
+    return;
+  }
+
+  try {
+    const publicKeyCredentialRequestOptions = {
+      challenge: generateChallenge(),
+      allowCredentials: [{
+        id: Uint8Array.from(credentialId, c => c.charCodeAt(0)),
+        type: "public-key",
+        transports: ["internal"],
+            }],
+      timeout: 60000, // 60 seconds
+    };
+
+    // Authenticate with the registered fingerprint
+    const assertion = await navigator.credentials.get({
+      publicKey: publicKeyCredentialRequestOptions
+    });
+
+    alert("Login successful! Welcome back.");
+  } catch (err) {
+    console.error("Error during login:", err);
+    alert("Login failed. Please try again.");
+  }
+});
+
+// Check if fingerprint is already registered
+window.onload = () => {
+  const credentialId = localStorage.getItem('fingerprintCredentialId');
+  if (credentialId) {
+    loginBtn.disabled = false;
+  }
+};
+   </script>
+</body>
+</html>
