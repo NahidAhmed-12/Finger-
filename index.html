@@ -1,103 +1,162 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fingerprint Authentication</title>
+    <title>Advanced Encoder-Decoder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+        :root { --primary-color: #007bff; --secondary-color: #6c757d; --background-color: #f4f7f9; --container-bg: #ffffff; --text-color: #333; --border-color: #dee2e6; --success-color: #28a745; }
+        body { font-family: 'Hind Siliguri', sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 800px; background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); position: relative; }
+        h1 { text-align: center; color: var(--primary-color); margin-top: 0; margin-bottom: 20px; }
+        .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 20px; }
+        .tab-button { padding: 10px 20px; cursor: pointer; background-color: transparent; border: none; font-size: 18px; font-weight: 600; color: var(--secondary-color); }
+        .tab-button.active { color: var(--primary-color); border-bottom: 3px solid var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        textarea { min-height: 120px; resize: vertical; }
+        #output-area { background-color: #e9ecef; font-family: 'Courier New', Courier, monospace; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; background-color: var(--primary-color); color: white; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        #copy-btn { background-color: var(--success-color); margin-top: 10px; }
+        #help-btn { position: absolute; top: 20px; right: 20px; width: 30px; height: 30px; background-color: var(--secondary-color); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; text-decoration: none; cursor: pointer; z-index: 1001; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); }
+        .modal-content { background-color: #fff; margin: 10% auto; padding: 25px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; position: relative; }
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 30px; font-weight: bold; cursor: pointer; }
+        pre { background-color: #eee; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; }
+    </style>
 </head>
 <body>
-    <h1>Fingerprint Authentication</h1>
-    <button id="registerBtn">Register Fingerprint</button>
-    <button id="loginBtn" disabled>Login with Fingerprint</button>
 
-   <script>
-     // Check if WebAuthn is supported
-if (!window.PublicKeyCredential) {
-  alert("Your browser does not support WebAuthn. Please use a modern browser.");
-}
+    <div class="container">
+        <a id="help-btn" title="সাহায্য এবং নিয়মাবলী">?</a>
+        <h1>Advanced Encoder</h1>
 
-const registerBtn = document.getElementById('registerBtn');
-const loginBtn = document.getElementById('loginBtn');
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'encoder')">এনকোডার</button>
+            <button class="tab-button" onclick="openTab(event, 'decoder')">ডিকোডার (এই সাইটের জন্য)</button>
+        </div>
 
-// Function to generate a random challenge
-function generateChallenge() {
-  return crypto.getRandomValues(new Uint8Array(32));
-}
+        <div id="encoder" class="tab-content active">
+            <div class="form-group">
+                <label for="html-input">এনকোড করার জন্য Text/HTML দিন:</label>
+                <textarea id="html-input" placeholder="যেমন: আমার সোনার বাংলা"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="password-input">পাসওয়ার্ড (এই সাইটে ডিকোড করার জন্য):</label>
+                <input type="password" id="password-input" placeholder="ঐচ্ছিক">
+            </div>
+            <div class="form-group">
+                <label for="domain-input">কোন ডোমেইনে কাজ করবে?</label>
+                <input type="text" id="domain-input" placeholder="www ছাড়া ডোমেইনের নাম (যেমন: example.com)">
+            </div>
+            <button id="encode-btn">এনকোড করুন</button>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="output-area">এনকোডেড কোড (যেকোনো ট্যাগের মধ্যে ব্যবহার করুন)</label>
+                <textarea id="output-area" readonly></textarea>
+            </div>
+            <button id="copy-btn">কোড কপি করুন</button>
+        </div>
 
-// Register Fingerprint
-registerBtn.addEventListener('click', async () => {
-  try {
-    const publicKeyCredentialCreationOptions = {
-      challenge: generateChallenge(),
-      rp: {
-        name: "My Fingerprint Auth Site",
-      },
-      user: {
-        id: crypto.getRandomValues(new Uint8Array(16)),
-        name: "user@example.com",
-        displayName: "User",
-      },
-      pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256 algorithm
-      authenticatorSelection: {
-        authenticatorAttachment: "platform", // Use platform authenticator (e.g., fingerprint scanner)
-      },
-      timeout: 60000, // 60 seconds
-      attestation: "direct"
-    };
+        <div id="decoder" class="tab-content">
+             <div class="form-group">
+                <label for="encrypted-text-input">এনক্রিপ্টেড টেক্সট:</label>
+                <textarea id="encrypted-text-input"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="decryption-password">পাসওয়ার্ড:</label>
+                <input type="password" id="decryption-password">
+            </div>
+            <button id="decode-btn">ডিকোড করুন</button>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="decrypted-output">ডিকোডেড ফলাফল:</label>
+                <textarea id="decrypted-output" readonly></textarea>
+            </div>
+        </div>
+    </div>
 
-    // Create a new credential (register fingerprint)
-    const credential = await navigator.credentials.create({
-      publicKey: publicKeyCredentialCreationOptions
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>ব্যবহারের নিয়মাবলী</h2>
+            <p>আপনার প্রোজেক্টে এনকোডেড কনটেন্ট ব্যবহার করতে নিচের দুটি ধাপ অনুসরণ করুন:</p>
+            <h4>ধাপ ১: CDN লিঙ্ক যুক্ত করুন</h4>
+            <p>এই লিঙ্কটি আপনার ওয়েবসাইটের <code>&lt;head&gt;</code> ট্যাগের মধ্যে যুক্ত করুন।</p>
+            <pre><code id="cdn-link-display"></code></pre>
+            <h4>ধাপ ২: এনকোডেড কোড ব্যবহার</h4>
+            <p>এনকোডার থেকে পাওয়া কোডটি কপি করে আপনার সাইটের যেকোনো HTML ট্যাগের ভেতরে পেস্ট করুন।</p>
+            <p><b>উদাহরণ:</b></p>
+            <pre><code>&lt;h1&gt;ENCODED_TEXT_HERE&lt;/h1&gt;
+&lt;p&gt;ANOTHER_ENCODED_TEXT&lt;/p&gt;</code></pre>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const helpBtn = document.getElementById('help-btn');
+        const helpModal = document.getElementById('help-modal');
+        const closeModalBtn = helpModal.querySelector('.close-btn');
+        const cdnLinkDisplay = document.getElementById('cdn-link-display');
+
+        const cdnUrl = `https://${window.location.hostname}/decoder.js`;
+        cdnLinkDisplay.textContent = `<script src="${cdnUrl}" defer><\/script>`;
+
+        helpBtn.addEventListener('click', (e) => { e.preventDefault(); helpModal.style.display = 'block'; });
+        closeModalBtn.addEventListener('click', () => { helpModal.style.display = 'none'; });
+        window.addEventListener('click', (event) => { if (event.target === helpModal) { helpModal.style.display = 'none'; } });
+
+        window.openTab = (evt, tabName) => {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = "none");
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.classList.add('active');
+        };
+
+        document.getElementById('encode-btn').addEventListener('click', () => {
+            const rawHtml = document.getElementById('html-input').value.trim();
+            const password = document.getElementById('password-input').value;
+            const targetDomain = document.getElementById('domain-input').value.trim().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '');
+            if (!rawHtml || !targetDomain) { alert("Text/HTML এবং ডোমেইন অবশ্যই পূরণ করতে হবে।"); return; }
+            
+            // ডেটা এবং ডোমেইন একত্রিত করে JSON ফরম্যাটে আনা হচ্ছে
+            const dataToEncode = JSON.stringify({ domain: targetDomain, content: rawHtml });
+            // Base64 এনকোডিং
+            const base64Encoded = btoa(unescape(encodeURIComponent(dataToEncode)));
+            // একটি ইউনিক Prefix যোগ করা হচ্ছে যা decoder.js খুঁজে বের করবে
+            const finalOutput = `ENC[${base64Encoded}]`;
+            document.getElementById('output-area').value = finalOutput;
+
+            if (password) {
+                document.getElementById('encrypted-text-input').value = CryptoJS.AES.encrypt(rawHtml, password).toString();
+            }
+        });
+        
+        document.getElementById('decode-btn').addEventListener('click', () => {
+            const encryptedText = document.getElementById('encrypted-text-input').value.trim();
+            const decryptionPassword = document.getElementById('decryption-password').value.trim();
+            if (!encryptedText || !decryptionPassword) { alert("এনক্রিপ্টেড টেক্সট এবং পাসওয়ার্ড দিন।"); return; }
+            try {
+                const bytes = CryptoJS.AES.decrypt(encryptedText, decryptionPassword);
+                const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+                if (!decryptedText) throw new Error("Invalid password");
+                document.getElementById('decrypted-output').value = decryptedText;
+            } catch (e) {
+                alert("ডিকোড ব্যর্থ হয়েছে।");
+            }
+        });
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const outputArea = document.getElementById('output-area');
+            if (!outputArea.value) { alert("প্রথমে কিছু এনকোড করুন।"); return; }
+            navigator.clipboard.writeText(outputArea.value).then(() => alert("কোড সফলভাবে কপি করা হয়েছে!"));
+        });
     });
-
-    // Save the credential ID to local storage
-    localStorage.setItem('fingerprintCredentialId', credential.id);
-    alert("Fingerprint registered successfully!");
-    loginBtn.disabled = false;
-  } catch (err) {
-    console.error("Error during registration:", err);
-    alert("Fingerprint registration failed. Please try again.");
-  }
-});
-
-// Login with Fingerprint
-loginBtn.addEventListener('click', async () => {
-  const credentialId = localStorage.getItem('fingerprintCredentialId');
-  if (!credentialId) {
-    alert("No fingerprint registered. Please register first.");
-    return;
-  }
-
-  try {
-    const publicKeyCredentialRequestOptions = {
-      challenge: generateChallenge(),
-      allowCredentials: [{
-        id: Uint8Array.from(credentialId, c => c.charCodeAt(0)),
-        type: "public-key",
-        transports: ["internal"],
-            }],
-      timeout: 60000, // 60 seconds
-    };
-
-    // Authenticate with the registered fingerprint
-    const assertion = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions
-    });
-
-    alert("Login successful! Welcome back.");
-  } catch (err) {
-    console.error("Error during login:", err);
-    alert("Login failed. Please try again.");
-  }
-});
-
-// Check if fingerprint is already registered
-window.onload = () => {
-  const credentialId = localStorage.getItem('fingerprintCredentialId');
-  if (credentialId) {
-    loginBtn.disabled = false;
-  }
-};
-   </script>
+    </script>
 </body>
 </html>
